@@ -1,2 +1,5 @@
+pyfiglet
 colorama
 requests
+pynput
+pyperclip
