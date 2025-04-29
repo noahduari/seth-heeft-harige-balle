@@ -1,90 +1,178 @@
-import os
+import pyfiglet
 import sys
 import time
+import random
+import os
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from colorama import Fore, init
+import requests
+from colorama import Fore, Style, init
+from tkinter import Tk, filedialog
+import subprocess
 
+# Initialize colorama
 init(autoreset=True)
 
-payload_triggered = False
+def print_big_title():
+    ascii_banner = pyfiglet.figlet_format("MATRIX", font="slant")
+    print(Fore.GREEN + ascii_banner)
 
-class PayloadListener(BaseHTTPRequestHandler):
-    def do_GET(self):
-        global payload_triggered
-        if self.path == '/payload_ping':
-            payload_triggered = True
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b'OK')
+def glitch_text(text, color=Fore.LIGHTGREEN_EX, glitches=5):
+    for _ in range(glitches):
+        glitched = ''.join(random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') if random.random() < 0.3 else c for c in text)
+        sys.stdout.write("\r" + color + glitched)
+        sys.stdout.flush()
+        time.sleep(0.1)
+    sys.stdout.write("\r" + color + text + "\n")
 
-def run_server():
-    server_address = ('', 8080)  # Listen on all IPs, port 8080
-    httpd = HTTPServer(server_address, PayloadListener)
-    httpd.serve_forever()
+def type_effect(text, color=Fore.GREEN, delay=0.02):
+    for char in text:
+        sys.stdout.write(color + char)
+        sys.stdout.flush()
+        time.sleep(delay)
+    print()
 
-def start_listener():
-    threading.Thread(target=run_server, daemon=True).start()
-    print(Fore.LIGHTGREEN_EX + "[+] Listener started on port 8080...\n")
+def loading_bar(text="Booting up Matrix Interface", length=30):
+    sys.stdout.write(Fore.LIGHTGREEN_EX + text + " [")
+    sys.stdout.flush()
+    for _ in range(length):
+        sys.stdout.write(Fore.GREEN + "█")
+        sys.stdout.flush()
+        time.sleep(0.02)
+    sys.stdout.write(Fore.LIGHTGREEN_EX + "]\n\n")
+    sys.stdout.flush()
 
-def listen_payload():
-    global payload_triggered
-    start_listener()
+def matrix_rain(lines=10):
+    for _ in range(lines):
+        line = ''.join(random.choice("01") for _ in range(60))
+        print(Fore.GREEN + line)
+        time.sleep(0.05)
 
-    print(Fore.YELLOW + "🔴 Waiting for payload to open... (Ctrl+C to stop)\n")
-    try:
-        while True:
-            if payload_triggered:
-                sys.stdout.write(Fore.GREEN + "\r🟢 Payload triggered!\n")
-                sys.stdout.flush()
-                break
-            else:
-                sys.stdout.write(Fore.RED + "\r🔴 Waiting for payload...   ")
-                sys.stdout.flush()
-                time.sleep(1)
-    except KeyboardInterrupt:
-        print(Fore.RED + "\nListener stopped.")
-
-def main_menu():
-    while True:
+def flash_screen(duration=2):
+    end_time = time.time() + duration
+    colors = [Fore.RED, Fore.GREEN, Fore.CYAN, Fore.MAGENTA, Fore.YELLOW, Fore.BLUE, Fore.WHITE]
+    
+    while time.time() < end_time:
+        color = random.choice(colors)
         os.system('cls' if os.name == 'nt' else 'clear')
-        print(Fore.LIGHTGREEN_EX + "\n[Menu]")
-        print(Fore.CYAN + "1. Build Payload")
-        print(Fore.CYAN + "2. Listen")
-        print(Fore.CYAN + "3. Exit")
+        print(color + pyfiglet.figlet_format("MATRIX", font="slant"))
+        time.sleep(0.1)
 
-        choice = input(Fore.YELLOW + "\nSelect an option (1-3): ").strip()
-
-        if choice == "1":
-            build_payload()
-        elif choice == "2":
-            listen_payload()
-        elif choice == "3":
-            print(Fore.MAGENTA + "\nGoodbye!")
-            break
+def send_test_message(webhook):
+    try:
+        response = requests.post(webhook, json={"content": "Test message from Matrix system!"})
+        if response.status_code == 204:
+            print(Fore.GREEN + "Test message sent successfully!")
+            return True
         else:
-            print(Fore.RED + "\nInvalid choice.")
-            time.sleep(1)
+            print(Fore.RED + "Failed to send test message. Check your webhook URL.")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(Fore.RED + f"Error: {e}")
+        return False
 
-def build_payload():
-    payload_code = '''
+def make_payload(webhook_url, filename="payload.py"):
+    payload_code = f'''
 import requests
 
+webhook_url = "{webhook_url}"
+
+data = {{
+    "content": "✅ Payload is online!"
+}}
+
 try:
-    requests.get("http://127.0.0.1:8080/payload_ping")
-except:
+    requests.post(webhook_url, json=data)
+except Exception:
     pass
 '''
-    with open("payload.py", "w", encoding="utf-8") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         f.write(payload_code.strip())
 
-    os.system('pyinstaller --onefile payload.py')
-    os.remove("payload.py")
-    os.remove("payload.spec")
-    os.system('rmdir /s /q build')
-    os.system('rmdir /s /q dist')
+def make_executable_animation():
+    glitch_text("Building Binary...", Fore.LIGHTCYAN_EX)
+    for _ in range(3):
+        sys.stdout.write(Fore.LIGHTMAGENTA_EX + "⏳ Building")
+        sys.stdout.flush()
+        time.sleep(0.2)
+        sys.stdout.write(".")
+        sys.stdout.flush()
+        time.sleep(0.2)
+        sys.stdout.write(".")
+        sys.stdout.flush()
+        time.sleep(0.2)
+        sys.stdout.write(".\r")
+        sys.stdout.flush()
+        time.sleep(0.2)
+        sys.stdout.write("              \r")
+    
+    matrix_rain(15)
+    loading_bar("Compiling Executable", 40)
+    flash_screen(duration=2)
+    glitch_text("Executable Created Successfully! 💥", Fore.LIGHTGREEN_EX)
 
-    print(Fore.LIGHTGREEN_EX + "\n✅ Payload built successfully!")
+def select_file(title="Select a file"):
+    root = Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(title=title)
+    return file_path
+
+def convert_to_exe(py_file, icon_path=None):
+    print(Fore.CYAN + "Packaging Python file into .exe...")
+    cmd = [
+        "pyinstaller",
+        "--onefile",
+        "--noconsole",
+    ]
+    if icon_path:
+        cmd += ["--icon", icon_path]
+    cmd.append(py_file)
+    subprocess.run(cmd, shell=True)
+
+    dist_path = os.path.join("dist", os.path.splitext(os.path.basename(py_file))[0] + ".exe")
+    if os.path.exists(dist_path):
+        print(Fore.GREEN + f"\nExecutable created: {dist_path}")
+    else:
+        print(Fore.RED + "\nSomething went wrong during .exe build.")
+
+def start_menu():
+    print_big_title()
+    glitch_text("WELCOME TO THE MATRIX")
+    loading_bar()
+    type_effect("System Ready. Press ENTER to Start.\n", Fore.LIGHTGREEN_EX)
+    input(Fore.YELLOW + "> Press ENTER to start...")
+
+    start_build_process()
+
+def start_build_process():
+    type_effect("Starting Build Process...\n", Fore.LIGHTCYAN_EX)
+
+    while True:
+        webhook = input(Fore.YELLOW + "Enter your Discord Webhook URL: ")
+        print(Fore.LIGHTGREEN_EX + "Checking if webhook is valid...")
+        if send_test_message(webhook):
+            break
+        else:
+            print(Fore.YELLOW + "Invalid webhook. Please enter a valid webhook URL.")
+
+    custom_name = input(Fore.YELLOW + "Do you want a custom executable name? (Y/N): ").strip().upper()
+    exe_name = "matrix_payload"
+    if custom_name == 'Y':
+        exe_name = input(Fore.YELLOW + "Enter custom name (no extension): ").strip()
+
+    custom_icon = input(Fore.YELLOW + "Use custom icon? (Y/N): ").strip().upper()
+    icon_path = None
+    if custom_icon == 'Y':
+        print(Fore.YELLOW + "Select your .ico image...")
+        icon_path = select_file("Select Icon")
+
+    payload_file = f"{exe_name}.py"
+    make_payload(webhook, filename=payload_file)
+
+    make_executable_animation()
+
+    convert_to_exe(payload_file, icon_path=icon_path)
+
+    print(Fore.LIGHTGREEN_EX + f"\nDone! Your file is in the 'dist' folder as {exe_name}.exe")
 
 if __name__ == "__main__":
-    main_menu()
+    start_menu()
